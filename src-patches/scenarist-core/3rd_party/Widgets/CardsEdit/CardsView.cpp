@@ -153,12 +153,23 @@ QString CardsView::save() const
 void CardsView::saveToImage(const QString& _filePath)
 {
     m_scene->clearSelection();
-    QImage image(m_scene->sceneRect().size().toSize(), QImage::Format_ARGB32_Premultiplied);
 
+    QRectF sourceRect = m_scene->itemsBoundingRect();
+    if (sourceRect.isNull() || sourceRect.isEmpty()) {
+        sourceRect = m_scene->sceneRect();
+    }
+    sourceRect = sourceRect.adjusted(-40.0, -40.0, 40.0, 40.0);
+
+    const QSize imageSize = sourceRect.size().toSize();
+    if (imageSize.isEmpty()) {
+        return;
+    }
+
+    QImage image(imageSize, QImage::Format_ARGB32_Premultiplied);
     QPainter painter(&image);
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.fillRect(image.rect(), m_view->backgroundBrush());
-    m_scene->render(&painter);
+    m_scene->render(&painter, QRectF(QPointF(0, 0), imageSize), sourceRect, Qt::IgnoreAspectRatio);
     image.save(_filePath);
 }
 
