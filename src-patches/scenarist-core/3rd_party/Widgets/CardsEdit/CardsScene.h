@@ -148,6 +148,11 @@ public:
     bool load(const QString& _xml);
 
     /**
+     * @brief Restore only free-map card positions and manual flow links from saved XML.
+     */
+    void restoreStoryMapState(const QString& _xml);
+
+    /**
      * @brief Задать фильтр для отображения карточек
      */
     void setFilter(const QString& _text, bool _caseSensitive, bool _filterByText, bool _filterByTags);
@@ -396,6 +401,12 @@ private:
      */
     bool m_showFlowLines = false;
     QList<QGraphicsItem*> m_flowLines;
+
+    /**
+     * @brief Manual story-flow links (source UUID, target UUID) and pending source.
+     */
+    QList<QPair<QString, QString>> m_flowLinks;
+    QString m_linkSourceUuid;
 };
 
 #endif // CARDSSCENE_H
