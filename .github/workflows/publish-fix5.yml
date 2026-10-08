@@ -1,0 +1,29 @@
+name: Publish FIX5 Release
+
+on:
+  push:
+    paths:
+      - ".github/workflows/publish-fix5.yml"
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download existing FIX5 artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir out
+          gh run download 37763409905 --repo zionzangar/KIT-Scenarist-VN-CZ --name KIT_Scenarist_VN_CZ_FIX5 --dir out
+
+      - name: Publish FIX5 release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view fix5 --repo zionzangar/KIT-Scenarist-VN-CZ >/dev/null 2>&1 && \
+            gh release upload fix5 out/KIT_Scenarist_VN_CZ_FIX5.zip --repo zionzangar/KIT-Scenarist-VN-CZ --clobber || \
+            gh release create fix5 out/KIT_Scenarist_VN_CZ_FIX5.zip --repo zionzangar/KIT-Scenarist-VN-CZ --title "KIT Scenarist VN CZ FIX5" --notes "Portable Windows x64 build. Czech UI, Czech spellcheck, Visual Novel CZ template, chapter printing, editor-template export, stable VN prefixes, lowercase template option."
