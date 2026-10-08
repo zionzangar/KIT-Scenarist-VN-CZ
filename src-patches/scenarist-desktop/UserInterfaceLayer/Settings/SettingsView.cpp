@@ -835,7 +835,7 @@ void SettingsView::initData()
     m_ui->spellCheckingLanguage->addItem(tr("Azerbaijani"), SpellChecker::Azerbaijani);
     m_ui->spellCheckingLanguage->addItem(tr("Belarusian"), SpellChecker::Belarusian);
     m_ui->spellCheckingLanguage->addItem(tr("Catalan"), SpellChecker::Catalan);
-    m_ui->spellCheckingLanguage->addItem(QString::fromUtf8("\xC4\x8C" "e" "\xC5\xA1" "tina"), SpellChecker::Czech);
+    m_ui->spellCheckingLanguage->addItem(QString(QChar(0x010C)) + QStringLiteral("e") + QChar(0x0161) + QStringLiteral("tina"), SpellChecker::Czech);
     m_ui->spellCheckingLanguage->addItem(tr("Danish"), SpellChecker::Danish);
     m_ui->spellCheckingLanguage->addItem(tr("Dutch"), SpellChecker::Dutch);
     m_ui->spellCheckingLanguage->addItem(tr("English (GB)"), SpellChecker::EnglishGB);
