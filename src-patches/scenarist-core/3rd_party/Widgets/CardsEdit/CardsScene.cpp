@@ -522,6 +522,15 @@ void CardsScene::updateItem(const QString &_uuid, bool _isFolder, const QString 
 
 void CardsScene::removeSceneItem(const QString &_uuid)
 {
+    for (int i = m_flowLinks.size() - 1; i >= 0; --i) {
+        if (m_flowLinks.at(i).first == _uuid || m_flowLinks.at(i).second == _uuid) {
+            m_flowLinks.removeAt(i);
+        }
+    }
+    if (m_linkSourceUuid == _uuid) {
+        m_linkSourceUuid.clear();
+    }
+
     if (m_isChangesBlocked) {
         return;
     }
@@ -649,22 +658,20 @@ void CardsScene::updateFlowLines()
         return;
     }
 
-    QList<CardItem*> cards;
-    for (QGraphicsItem* item : m_items) {
-        if (CardItem* card = qgraphicsitem_cast<CardItem*>(item)) {
-            if (!card->isFolder() && card->isVisible()) {
-                cards.append(card);
-            }
-        }
-    }
-
     const QColor lineColor(85, 140, 210);
     QPen pen(lineColor, 2.4);
     pen.setCosmetic(true);
 
-    for (int i = 0; i + 1 < cards.size(); ++i) {
-        const QRectF fromRect = cards.at(i)->sceneBoundingRect();
-        const QRectF toRect = cards.at(i + 1)->sceneBoundingRect();
+    for (const QPair<QString, QString>& link : m_flowLinks) {
+        CardItem* fromCard = qgraphicsitem_cast<CardItem*>(m_itemsMap.value(link.first, nullptr));
+        CardItem* toCard = qgraphicsitem_cast<CardItem*>(m_itemsMap.value(link.second, nullptr));
+        if (fromCard == nullptr || toCard == nullptr || fromCard == toCard
+                || !fromCard->isVisible() || !toCard->isVisible()) {
+            continue;
+        }
+
+        const QRectF fromRect = fromCard->sceneBoundingRect();
+        const QRectF toRect = toCard->sceneBoundingRect();
         const QPointF fromCenter = fromRect.center();
         const QPointF toCenter = toRect.center();
 
@@ -778,6 +785,12 @@ QString CardsScene::save() const
         }
     }
 
+    for (const QPair<QString, QString>& link : m_flowLinks) {
+        writer.writeEmptyElement("link");
+        writer.writeAttribute("from", link.first);
+        writer.writeAttribute("to", link.second);
+    }
+
     writer.writeEndElement();
     writer.writeEndDocument();
 
@@ -795,6 +808,8 @@ bool CardsScene::load(const QString &_xml)
     }
     m_items.clear();
     m_itemsMap.clear();
+    m_flowLinks.clear();
+    m_linkSourceUuid.clear();
     //
     // Очищаем корзину
     //
@@ -863,6 +878,12 @@ bool CardsScene::load(const QString &_xml)
             const qreal y = attributes.namedItem("y").toAttr().value().toDouble();
             addCard(uuid, isFolder, number, title, description, stamp, colors, isEmbedded,
                     QPointF(x, y));
+        } else if (item.tagName() == "link") {
+            const QString from = attributes.namedItem("from").toAttr().value();
+            const QString to = attributes.namedItem("to").toAttr().value();
+            if (!from.isEmpty() && !to.isEmpty() && from != to) {
+                m_flowLinks.append(qMakePair(from, to));
+            }
         }
     }
 
@@ -873,6 +894,36 @@ bool CardsScene::load(const QString &_xml)
     updateFlowLines();
 
     return true;
+}
+
+void CardsScene::restoreStoryMapState(const QString& _xml)
+{
+    QDomDocument doc;
+    if (!doc.setContent(_xml)) {
+        return;
+    }
+
+    m_flowLinks.clear();
+    const QDomNodeList items = doc.documentElement().childNodes();
+    for (int i = 0; i < items.count(); ++i) {
+        const QDomElement item = items.at(i).toElement();
+        const QDomNamedNodeMap attributes = item.attributes();
+        if (item.tagName() == "card") {
+            const QString uuid = attributes.namedItem("id").toAttr().value();
+            CardItem* card = qgraphicsitem_cast<CardItem*>(m_itemsMap.value(uuid, nullptr));
+            if (card != nullptr) {
+                card->setPos(attributes.namedItem("x").toAttr().value().toDouble(),
+                             attributes.namedItem("y").toAttr().value().toDouble());
+            }
+        } else if (item.tagName() == "link") {
+            const QString from = attributes.namedItem("from").toAttr().value();
+            const QString to = attributes.namedItem("to").toAttr().value();
+            if (!from.isEmpty() && !to.isEmpty() && from != to) {
+                m_flowLinks.append(qMakePair(from, to));
+            }
+        }
+    }
+    updateFlowLines();
 }
 
 void CardsScene::setFilter(const QString& _text, bool _caseSensitive, bool _filterByText, bool _filterByTags)
@@ -1055,6 +1106,17 @@ void CardsScene::contextMenuEvent(QGraphicsSceneContextMenuEvent *_event)
     //
     // Остальное
     //
+    QAction *flowSeparator = menu->addSeparator();
+    QAction *startFlowAction = menu->addAction(QStringLiteral("Začít spojení odsud"));
+    QAction *finishFlowAction = menu->addAction(QStringLiteral("Spojit sem"));
+    QAction *removeFlowAction = menu->addAction(QStringLiteral("Odstranit spojení této scény"));
+    const bool canUseFlow = m_showFlowLines && card != nullptr && !card->isFolder();
+    startFlowAction->setVisible(canUseFlow);
+    finishFlowAction->setVisible(canUseFlow && !m_linkSourceUuid.isEmpty()
+                                 && m_linkSourceUuid != (card != nullptr ? card->uuid() : QString()));
+    removeFlowAction->setVisible(canUseFlow);
+    flowSeparator->setVisible(canUseFlow);
+
     QAction *endSeparator = menu->addSeparator();
     QAction *addAction = menu->addAction(tr("Create card"));
     QAction *removeAction = menu->addAction(tr("Remove"));
@@ -1074,6 +1136,10 @@ void CardsScene::contextMenuEvent(QGraphicsSceneContextMenuEvent *_event)
         endSeparator->setVisible(false);
         editAction->setVisible(false);
         removeAction->setVisible(false);
+        flowSeparator->setVisible(false);
+        startFlowAction->setVisible(false);
+        finishFlowAction->setVisible(false);
+        removeFlowAction->setVisible(false);
     } else {
         if (act != nullptr) {
             convertToFolderAction->setVisible(false);
@@ -1168,6 +1234,31 @@ void CardsScene::contextMenuEvent(QGraphicsSceneContextMenuEvent *_event)
         else if (triggered == convertToSceneAction) {
             const QString uuid = act != nullptr ? act->uuid() : card->uuid();
             emit cardTypeChanged(uuid, false);
+        }
+        else if (triggered == startFlowAction && card != nullptr) {
+            m_linkSourceUuid = card->uuid();
+        }
+        else if (triggered == finishFlowAction && card != nullptr && !m_linkSourceUuid.isEmpty()) {
+            const QPair<QString, QString> link(m_linkSourceUuid, card->uuid());
+            if (link.first != link.second && !m_flowLinks.contains(link)) {
+                m_flowLinks.append(link);
+            }
+            m_linkSourceUuid.clear();
+            updateFlowLines();
+            emit cardsChanged();
+        }
+        else if (triggered == removeFlowAction && card != nullptr) {
+            const QString uuid = card->uuid();
+            for (int i = m_flowLinks.size() - 1; i >= 0; --i) {
+                if (m_flowLinks.at(i).first == uuid || m_flowLinks.at(i).second == uuid) {
+                    m_flowLinks.removeAt(i);
+                }
+            }
+            if (m_linkSourceUuid == uuid) {
+                m_linkSourceUuid.clear();
+            }
+            updateFlowLines();
+            emit cardsChanged();
         }
         //
         // Удалить цвет
