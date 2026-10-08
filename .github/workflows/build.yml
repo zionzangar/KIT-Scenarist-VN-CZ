@@ -297,18 +297,18 @@ jobs:
           pause
           "@ | Set-Content -Encoding ASCII "$bin\INSTALOVAT_SABLONU.bat"
           @"
-          KIT Scenarist VN CZ FIX6 - přenosná verze
+          KIT Scenarist VN CZ FIX7 - přenosná verze
           Český překlad aplikace je zabudovaný přímo v programu.
           Česká kontrola pravopisu je součástí balíčku.
           V Nastavení > Kontrola pravopisu zvolte Čeština.
           "@ | Set-Content -Encoding UTF8 "$bin\CZ_README.txt"
-          Compress-Archive -Path "$bin\*" -DestinationPath "$env:GITHUB_WORKSPACE\KIT_Scenarist_VN_CZ_FIX6.zip" -Force
+          Compress-Archive -Path "$bin\*" -DestinationPath "$env:GITHUB_WORKSPACE\KIT_Scenarist_VN_CZ_FIX7.zip" -Force
 
       - name: Upload Czech build
         uses: actions/upload-artifact@v4
         with:
-          name: KIT_Scenarist_VN_CZ_FIX6
-          path: KIT_Scenarist_VN_CZ_FIX6.zip
+          name: KIT_Scenarist_VN_CZ_FIX7
+          path: KIT_Scenarist_VN_CZ_FIX7.zip
 
       - name: Publish GitHub Release
         shell: powershell
@@ -316,16 +316,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $tag = "fix6"
+          $tag = "fix7"
           $repo = "zionzangar/KIT-Scenarist-VN-CZ"
           $ErrorActionPreference = "Continue"
           & gh release view $tag --repo $repo *> $null
           $exists = ($LASTEXITCODE -eq 0)
           $ErrorActionPreference = "Stop"
           if ($exists) {
-              gh release upload $tag "KIT_Scenarist_VN_CZ_FIX6.zip" --repo $repo --clobber
+              gh release upload $tag "KIT_Scenarist_VN_CZ_FIX7.zip" --repo $repo --clobber
           } else {
-              gh release create $tag "KIT_Scenarist_VN_CZ_FIX6.zip" --repo $repo --title "KIT Scenarist VN CZ FIX6" --notes "Portable Windows x64 build. Includes Czech UI, Czech spellcheck, Visual Novel CZ template, chapter printing, editor-template export, stable VN prefixes, lowercase template option, free Story Map mode, and flow connector arrows." --target "$env:GITHUB_SHA"
+              gh release create $tag "KIT_Scenarist_VN_CZ_FIX7.zip" --repo $repo --title "KIT Scenarist VN CZ FIX7" --notes "Portable Windows x64 build. Includes Czech UI, Czech spellcheck, Visual Novel CZ template, chapter printing, editor-template export, stable VN prefixes, lowercase template option, free Story Map mode, persistent card positions, manual branching connectors, and lowercase-first-letter support for scene names/jumps." --target "$env:GITHUB_SHA"
           }
           if-no-files-found: error
           retention-days: 7
