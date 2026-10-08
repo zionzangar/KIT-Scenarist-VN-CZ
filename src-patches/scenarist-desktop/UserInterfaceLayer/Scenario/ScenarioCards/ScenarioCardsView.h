@@ -253,6 +253,12 @@ namespace UserInterface {
      */
     FlatButton* m_storyMap = nullptr;
 
+    /**
+     * @brief Free-map state used only while toggling Mapa <-> grid.
+     * Durable persistence is handled by the project scheme, not SettingsStorage.
+     */
+    QString m_storyMapState;
+
         /**
          * @brief Виджет настройки размера и упорядочивания карточек
          */
