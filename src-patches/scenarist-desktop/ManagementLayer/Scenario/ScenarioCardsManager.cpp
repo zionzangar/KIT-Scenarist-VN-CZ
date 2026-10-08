@@ -74,6 +74,11 @@ void ScenarioCardsManager::reloadSettings()
 
 QString ScenarioCardsManager::save() const
 {
+    // Persist the free Story Map layout/links into the project even when
+    // the user is currently looking at the normal grid layout.
+    if (!m_storyMapState.isEmpty()) {
+        return m_storyMapState;
+    }
     return m_view->save();
 }
 
@@ -84,6 +89,10 @@ void ScenarioCardsManager::saveChanges(bool _hasChangesInText)
 
 void ScenarioCardsManager::load(BusinessLogic::ScenarioModel* _model, const QString& _xml)
 {
+    // The project scheme is the durable Story Map state across application restarts.
+    if (!_xml.isEmpty()) {
+        m_storyMapState = _xml;
+    }
     //
     // Preserve free-map state before the Cards view gets rebuilt on tab/module switches.
     //
