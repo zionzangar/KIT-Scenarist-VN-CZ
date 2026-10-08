@@ -360,9 +360,31 @@ void ScenarioCardsView::initConnections()
     connect(m_resizer, &CardsResizer::parametersChanged, this, &ScenarioCardsView::resortCards);
 
     connect(m_storyMap, &FlatButton::toggled, this, [this](bool enabled) {
+        auto settings = DataStorageLayer::StorageFacade::settingsStorage();
+
+        if (!enabled) {
+            // Save the free-map layout BEFORE grid mode reorders the cards.
+            settings->setValue(
+                "cards/story-map-state",
+                m_cards->save(),
+                DataStorageLayer::SettingsStorage::ScenarioSettings);
+        }
+
         m_cards->setFixedMode(!enabled);
+
+        if (enabled) {
+            // Restore the previously saved free-map layout after leaving grid mode.
+            const QString savedStoryMap =
+                    settings->value(
+                        "cards/story-map-state",
+                        DataStorageLayer::SettingsStorage::ScenarioSettings);
+            if (!savedStoryMap.isEmpty()) {
+                m_cards->restoreStoryMapState(savedStoryMap);
+            }
+        }
+
         m_cards->setShowFlowLines(enabled);
-        DataStorageLayer::StorageFacade::settingsStorage()->setValue(
+        settings->setValue(
             "cards/story-map-mode",
             enabled ? "true" : "false",
             DataStorageLayer::SettingsStorage::ApplicationSettings);
