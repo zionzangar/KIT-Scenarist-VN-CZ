@@ -119,10 +119,8 @@ bool CardsScene::isFixedMode() const
 
 void CardsScene::setShowFlowLines(bool _show)
 {
-    if (m_showFlowLines != _show) {
-        m_showFlowLines = _show;
-        updateFlowLines();
-    }
+    m_showFlowLines = _show;
+    updateFlowLines();
 }
 
 QString CardsScene::selectedItemUuid() const
@@ -658,8 +656,8 @@ void CardsScene::updateFlowLines()
         return;
     }
 
-    const QColor lineColor(85, 140, 210);
-    QPen pen(lineColor, 2.4);
+    const QColor lineColor(40, 40, 40);
+    QPen pen(lineColor, 5.0);
     pen.setCosmetic(true);
 
     for (const QPair<QString, QString>& link : m_flowLinks) {
@@ -710,7 +708,7 @@ void CardsScene::updateFlowLines()
         path.cubicTo(c1, c2, end);
 
         const qreal angle = qAtan2(end.y() - c2.y(), end.x() - c2.x());
-        const qreal arrowSize = 10.0;
+        const qreal arrowSize = 16.0;
         const QPointF a1 = end - QPointF(qCos(angle - M_PI / 6.0) * arrowSize,
                                          qSin(angle - M_PI / 6.0) * arrowSize);
         const QPointF a2 = end - QPointF(qCos(angle + M_PI / 6.0) * arrowSize,
