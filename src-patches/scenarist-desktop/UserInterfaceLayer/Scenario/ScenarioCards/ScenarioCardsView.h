@@ -57,6 +57,11 @@ namespace UserInterface {
          */
         QString save() const;
 
+    /**
+     * @brief Restore only free-map card positions and manual links.
+     */
+    void restoreStoryMapState(const QString& _xml);
+
         /**
          * @brief Сохранить в изображение
          */
