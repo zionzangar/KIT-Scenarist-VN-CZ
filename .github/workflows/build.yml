@@ -255,6 +255,8 @@ jobs:
           Copy-Item "$env:GITHUB_WORKSPACE\inputs\src-patches\scenarist-core\3rd_party\Widgets\CardsEdit\CardsView.cpp" "$core\3rd_party\Widgets\CardsEdit\CardsView.cpp" -Force
           Copy-Item "$env:GITHUB_WORKSPACE\inputs\src-patches\scenarist-desktop\UserInterfaceLayer\Scenario\ScenarioCards\ScenarioCardsView.h" "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop\UserInterfaceLayer\Scenario\ScenarioCards\ScenarioCardsView.h" -Force
           Copy-Item "$env:GITHUB_WORKSPACE\inputs\src-patches\scenarist-desktop\UserInterfaceLayer\Scenario\ScenarioCards\ScenarioCardsView.cpp" "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop\UserInterfaceLayer\Scenario\ScenarioCards\ScenarioCardsView.cpp" -Force
+          Copy-Item "$env:GITHUB_WORKSPACE\inputs\src-patches\scenarist-desktop\ManagementLayer\Scenario\ScenarioCardsManager.h" "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop\ManagementLayer\Scenario\ScenarioCardsManager.h" -Force
+          Copy-Item "$env:GITHUB_WORKSPACE\inputs\src-patches\scenarist-desktop\ManagementLayer\Scenario\ScenarioCardsManager.cpp" "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop\ManagementLayer\Scenario\ScenarioCardsManager.cpp" -Force
 
           $dictDir = "$env:GITHUB_WORKSPACE\czech-hunspell"
           New-Item -ItemType Directory -Force $dictDir | Out-Null
@@ -298,18 +300,18 @@ jobs:
           pause
           "@ | Set-Content -Encoding ASCII "$bin\INSTALOVAT_SABLONU.bat"
           @"
-          KIT Scenarist VN CZ FIX8 - přenosná verze
+          KIT Scenarist VN CZ FIX9 - přenosná verze
           Český překlad aplikace je zabudovaný přímo v programu.
           Česká kontrola pravopisu je součástí balíčku.
           V Nastavení > Kontrola pravopisu zvolte Čeština.
           "@ | Set-Content -Encoding UTF8 "$bin\CZ_README.txt"
-          Compress-Archive -Path "$bin\*" -DestinationPath "$env:GITHUB_WORKSPACE\KIT_Scenarist_VN_CZ_FIX8.zip" -Force
+          Compress-Archive -Path "$bin\*" -DestinationPath "$env:GITHUB_WORKSPACE\KIT_Scenarist_VN_CZ_FIX9.zip" -Force
 
       - name: Upload Czech build
         uses: actions/upload-artifact@v4
         with:
-          name: KIT_Scenarist_VN_CZ_FIX8
-          path: KIT_Scenarist_VN_CZ_FIX8.zip
+          name: KIT_Scenarist_VN_CZ_FIX9
+          path: KIT_Scenarist_VN_CZ_FIX9.zip
 
       - name: Publish GitHub Release
         shell: powershell
@@ -317,14 +319,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $tag = "fix8"
+          $tag = "fix9"
           $repo = "zionzangar/KIT-Scenarist-VN-CZ"
           $ErrorActionPreference = "Continue"
           & gh release view $tag --repo $repo *> $null
           $exists = ($LASTEXITCODE -eq 0)
           $ErrorActionPreference = "Stop"
           if ($exists) {
-              gh release upload $tag "KIT_Scenarist_VN_CZ_FIX8.zip" --repo $repo --clobber
+              gh release upload $tag "KIT_Scenarist_VN_CZ_FIX9.zip" --repo $repo --clobber
           } else {
-              gh release create $tag "KIT_Scenarist_VN_CZ_FIX8.zip" --repo $repo --title "KIT Scenarist VN CZ FIX8" --notes "Portable Windows x64 build. Includes Czech UI, Czech spellcheck, Visual Novel CZ template, chapter printing, editor-template export, stable VN prefixes, lowercase template option, free Story Map mode, persistent card positions, manual branching connectors, persistent map layout, lowercase-first-letter support for scene names/jumps, and encoding-safe Czech UI labels." --target "$env:GITHUB_SHA"
+              gh release create $tag "KIT_Scenarist_VN_CZ_FIX9.zip" --repo $repo --title "KIT Scenarist VN CZ FIX9" --notes "Portable Windows x64 build. Includes Czech UI, Czech spellcheck, Visual Novel CZ template, chapter printing, editor-template export, stable VN prefixes, lowercase template option, free Story Map mode, persistent card positions, manual branching connectors, persistent map layout, lowercase-first-letter support for scene names/jumps, and encoding-safe Czech UI labels and stable story-map state across module switches." --target "$env:GITHUB_SHA"
           }
