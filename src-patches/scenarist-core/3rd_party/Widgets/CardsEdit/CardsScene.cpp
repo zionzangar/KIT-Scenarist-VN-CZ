@@ -1105,9 +1105,9 @@ void CardsScene::contextMenuEvent(QGraphicsSceneContextMenuEvent *_event)
     // Остальное
     //
     QAction *flowSeparator = menu->addSeparator();
-    QAction *startFlowAction = menu->addAction(QStringLiteral("Za") + QChar(0x010D) + QString(QChar(0x00ED)) + QStringLiteral("t spojen") + QChar(0x00ED) + QStringLiteral(" odsud"));
-    QAction *finishFlowAction = menu->addAction(QStringLiteral("Spojit sem"));
-    QAction *removeFlowAction = menu->addAction(QStringLiteral("Odstranit spojen") + QChar(0x00ED) + QStringLiteral(" t") + QChar(0x00E9) + QStringLiteral("to sc") + QChar(0x00E9) + QStringLiteral("ny"));
+    QAction *startFlowAction = menu->addAction(tr("Start connection here"));
+    QAction *finishFlowAction = menu->addAction(tr("Connect here"));
+    QAction *removeFlowAction = menu->addAction(tr("Remove connections for this scene"));
     const bool canUseFlow = m_showFlowLines && card != nullptr && !card->isFolder();
     startFlowAction->setVisible(canUseFlow);
     finishFlowAction->setVisible(canUseFlow && !m_linkSourceUuid.isEmpty()
