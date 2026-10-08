@@ -158,7 +158,8 @@ void SettingsView::setApplicationLanguage(int _value)
         }
 
         case 5: {
-            m_ui->applicationLanguage->setText(tr("Ukrainian"));
+            m_ui->applicationLanguage->setText(
+                QString(QChar(0x010C)) + QStringLiteral("e") + QChar(0x0161) + QStringLiteral("tina"));
             break;
         }
 
