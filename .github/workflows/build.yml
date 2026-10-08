@@ -1,0 +1,307 @@
+name: Build KIT Scenarist VN CZ
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/build.yml"
+      - "src-patches/**"
+      - "translations/**"
+      - "templates/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout VN CZ sources
+        uses: actions/checkout@v4
+        with:
+          path: inputs
+
+      - name: Checkout KIT Scenarist
+        uses: actions/checkout@v4
+        with:
+          repository: dimkanovikov/KITScenarist
+          ref: develop
+          submodules: recursive
+          path: upstream
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Qt 5.14.2
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "5.14.2"
+          host: "windows"
+          target: "desktop"
+          arch: "win64_msvc2017_64"
+          modules: "qtwebengine"
+          cache: true
+
+      - name: Prepare Czech translation and spellchecker
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $parts = Get-ChildItem "$env:GITHUB_WORKSPACE\inputs\translations\jsonparts\part*.txt" | Sort-Object Name
+          if ($parts.Count -ne 7) { throw "Expected 7 translation parts, got $($parts.Count)" }
+          $json = ($parts | ForEach-Object { Get-Content -Raw -Encoding UTF8 $_.FullName }) -join ""
+          [IO.File]::WriteAllText("$env:GITHUB_WORKSPACE\translations.json", $json, [Text.UTF8Encoding]::new($false))
+
+          $core = "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-core"
+          $trans = "$core\Resources\Translations"
+          $py = @'
+          import json, html, re, pathlib, xml.etree.ElementTree as ET, os
+          workspace = pathlib.Path(os.environ["GITHUB_WORKSPACE"])
+          trans_dir = workspace / "upstream" / "src" / "bin" / "scenarist-core" / "Resources" / "Translations"
+          en_path = trans_dir / "Scenarist_en.ts"
+          cs_path = trans_dir / "Scenarist_cs.ts"
+          translations = json.loads((workspace / "translations.json").read_text(encoding="utf-8"))
+          tree = ET.parse(en_path)
+          root = tree.getroot()
+          root.set("language", "cs_CZ")
+          seen = {}
+          messages = 0
+          for msg in root.findall(".//message"):
+              src_el = msg.find("source")
+              if src_el is None:
+                  continue
+              src = src_el.text or ""
+              if src not in seen:
+                  seen[src] = len(seen)
+              idx = seen[src]
+              value = html.unescape(translations[str(idx)])
+              if sorted(re.findall(r"%\d+", src)) != sorted(re.findall(r"%\d+", value)):
+                  raise RuntimeError(f"Placeholder mismatch at {idx}: {src!r}")
+              tr = msg.find("translation")
+              if tr is None:
+                  tr = ET.SubElement(msg, "translation")
+              tr.attrib.pop("type", None)
+              tr.text = value
+              messages += 1
+          if messages != 1202 or len(seen) != 1016 or len(translations) != 1016:
+              raise RuntimeError(f"Unexpected translation structure: messages={messages}, unique={len(seen)}, translations={len(translations)}")
+
+          vn_names = {
+              "Scene Heading": "N\u00e1zev sc\u00e9ny",
+              "Scene Characters": "Skok na sc\u00e9nu",
+              "Action": "D\u011bn\u00ed",
+              "Character": "Postava",
+              "Parenthetical": "Tech. popis",
+              "Dialog": "Dialog",
+              "Transition": "SFX / Zvuk",
+              "Shot": "Obraz",
+              "Noprintable Text": "Intern\u00ed logika",
+              "Folder": "Kapitola",
+              "Scene Description": "Popis sc\u00e9ny",
+              "Lyrics": "Hern\u00ed volba",
+          }
+          for context in root.findall("context"):
+              if (context.findtext("name") or "") != "BusinessLogic::ScenarioBlockStyle":
+                  continue
+              for msg in context.findall("message"):
+                  src = msg.findtext("source") or ""
+                  if src in vn_names:
+                      tr = msg.find("translation")
+                      if tr is None:
+                          tr = ET.SubElement(msg, "translation")
+                      tr.attrib.pop("type", None)
+                      tr.text = vn_names[src]
+
+          tmp = cs_path.with_suffix(".tmp")
+          tree.write(tmp, encoding="utf-8", xml_declaration=True)
+          text = tmp.read_text(encoding="utf-8")
+          first, rest = text.split("\n", 1)
+          cs_path.write_text(first + "\n<!DOCTYPE TS>\n" + rest, encoding="utf-8")
+          tmp.unlink()
+          '@
+          [IO.File]::WriteAllText("$env:GITHUB_WORKSPACE\make_czech_ts.py", $py, [Text.UTF8Encoding]::new($false))
+          python "$env:GITHUB_WORKSPACE\make_czech_ts.py"
+
+          lrelease "$trans\Scenarist_cs.ts" -qm "$trans\Scenarist_cs.qm"
+          if (!(Test-Path "$trans\Scenarist_cs.qm")) { throw "Scenarist_cs.qm was not created" }
+
+          $qmake = (Get-Command qmake).Source
+          $qtRoot = Split-Path (Split-Path $qmake -Parent) -Parent
+          $qtTranslations = Join-Path $qtRoot "translations"
+          Copy-Item (Join-Path $qtTranslations "qt_cs.qm") "$trans\qt_cs.qm" -Force
+          Copy-Item (Join-Path $qtTranslations "qtbase_cs.qm") "$trans\qtbase_cs.qm" -Force
+
+          $qrcPath = "$core\Resources\Translations.qrc"
+          $qrc = Get-Content -Raw -Encoding UTF8 $qrcPath
+          $insert = @"
+                  <file>Translations/Scenarist_cs.qm</file>
+                  <file>Translations/qt_cs.qm</file>
+                  <file>Translations/qtbase_cs.qm</file>
+          "@
+          $qrc = $qrc -replace '</qresource>', ($insert + [Environment]::NewLine + '    </qresource>')
+          [IO.File]::WriteAllText($qrcPath, $qrc, [Text.UTF8Encoding]::new($false))
+
+          $appPath = "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop\Application.cpp"
+          $app = Get-Content -Raw -Encoding UTF8 $appPath
+          $forceCzech = @"
+
+              translationSuffix = "cs";
+              qtTranslationSuffix = "cs";
+              qtBaseTranslationSuffix = "cs";
+              currentLanguage = QLocale::Czech;
+
+          "@
+          $needle = '    QLocale::setDefault(QLocale(currentLanguage));'
+          if (!$app.Contains($needle)) { throw "Could not find locale patch point" }
+          $app = $app.Replace($needle, $forceCzech + $needle)
+          $app = $app.Replace('setApplicationVersion("0.7.2 rc 15");', 'setApplicationVersion("0.7.2 rc 15 CZ");')
+          [IO.File]::WriteAllText($appPath, $app, [Text.UTF8Encoding]::new($false))
+
+          $desktopPro = "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop.pro"
+          $pro = Get-Content -Raw -Encoding UTF8 $desktopPro
+          if (!$pro.Contains('DEFINES += HUNSPELL_STATIC')) {
+              $pro = $pro.Replace('CONFIG += c++11 warn_on', 'CONFIG += c++11 warn_on' + [Environment]::NewLine + 'DEFINES += HUNSPELL_STATIC')
+          }
+          [IO.File]::WriteAllText($desktopPro, $pro, [Text.UTF8Encoding]::new($false))
+
+          $spellH = "$core\3rd_party\Widgets\SpellCheckTextEdit\SpellChecker.h"
+          $h = Get-Content -Raw -Encoding UTF8 $spellH
+          $needleH = "        Danish" + [Environment]::NewLine + "    };"
+          $replaceH = "        Danish," + [Environment]::NewLine + "        Czech" + [Environment]::NewLine + "    };"
+          if (!$h.Contains($needleH)) { throw "SpellChecker enum patch point not found" }
+          $h = $h.Replace($needleH, $replaceH)
+          [IO.File]::WriteAllText($spellH, $h, [Text.UTF8Encoding]::new($false))
+
+          $spellCpp = "$core\3rd_party\Widgets\SpellCheckTextEdit\SpellChecker.cpp"
+          $c = Get-Content -Raw -Encoding UTF8 $spellCpp
+          $danish = @'
+                  case Danish:
+                      code = "da_DA";
+                      break;
+          '@
+          $danishCz = @'
+                  case Danish:
+                      code = "da_DA";
+                      break;
+                  case Czech:
+                      code = "cs_CZ";
+                      break;
+          '@
+          if (!$c.Contains($danish)) { throw "Danish mapping patch point not found" }
+          $c = $c.Replace($danish, $danishCz)
+
+          $oldPath = @'
+              QString appDataFolderPath = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+              QString hunspellDictionariesFolderPath = appDataFolderPath + QDir::separator() + "Hunspell";
+              QString dictionaryFilePath = hunspellDictionariesFolderPath + QDir::separator() + fileName;
+              return dictionaryFilePath;
+          '@
+          $newPath = @'
+              QString portableFolderPath = QApplication::applicationDirPath()
+                      + QDir::separator() + "Hunspell";
+              QString portableDictionaryFilePath = portableFolderPath
+                      + QDir::separator() + fileName;
+              if (QFileInfo::exists(portableDictionaryFilePath)) {
+                  return portableDictionaryFilePath;
+              }
+
+              QString appDataFolderPath = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+              QString hunspellDictionariesFolderPath = appDataFolderPath + QDir::separator() + "Hunspell";
+              QString dictionaryFilePath = hunspellDictionariesFolderPath + QDir::separator() + fileName;
+              return dictionaryFilePath;
+          '@
+          if (!$c.Contains($oldPath)) { throw "Hunspell path patch point not found" }
+          $c = $c.Replace($oldPath, $newPath)
+          [IO.File]::WriteAllText($spellCpp, $c, [Text.UTF8Encoding]::new($false))
+
+          $settings = "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop\UserInterfaceLayer\Settings\SettingsView.cpp"
+          $s = Get-Content -Raw -Encoding UTF8 $settings
+          $cat = '    m_ui->spellCheckingLanguage->addItem(tr("Catalan"), SpellChecker::Catalan);'
+          if (!$s.Contains($cat)) { throw "Settings spell-language patch point not found" }
+          $s = $s.Replace($cat, $cat + [Environment]::NewLine + '    m_ui->spellCheckingLanguage->addItem(QStringLiteral("\u010Ce\u0161tina"), SpellChecker::Czech);')
+          [IO.File]::WriteAllText($settings, $s, [Text.UTF8Encoding]::new($false))
+
+          # This portable build must not try to download dictionaries from the old KIT server.
+          # Point SettingsManager to the same local Hunspell folder beside Scenarist.exe.
+          $settingsMgr = "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop\ManagementLayer\Settings\SettingsManager.cpp"
+          $sm = Get-Content -Raw -Encoding UTF8 $settingsMgr
+          $oldDictRoot = '    const QString appDataFolderPath = QStandardPaths::writableLocation(QStandardPaths::DataLocation);' + [Environment]::NewLine + '    const QString hunspellDictionariesFolderPath =' + [Environment]::NewLine + '        appDataFolderPath + QDir::separator() + "Hunspell" + QDir::separator();'
+          $newDictRoot = '    const QString hunspellDictionariesFolderPath =' + [Environment]::NewLine + '        QApplication::applicationDirPath() + QDir::separator() + "Hunspell" + QDir::separator();'
+          if (!$sm.Contains($oldDictRoot)) { throw "SettingsManager dictionary path patch point not found" }
+          $sm = $sm.Replace($oldDictRoot, $newDictRoot)
+          [IO.File]::WriteAllText($settingsMgr, $sm, [Text.UTF8Encoding]::new($false))
+
+          $highlighter = "$core\3rd_party\Widgets\SpellCheckTextEdit\SpellCheckHighlighter.cpp"
+          $hl = (Get-Content -Raw -Encoding UTF8 $highlighter).Replace("`r`n", "`n")
+          $oldActiveWordBlock = "                    if (m_edited`n                            && positionInText <= m_cursorPosition`n                            && positionInText + wordToCheck.length() > m_cursorPosition) {`n                        continue;`n                    }`n"
+          if (!$hl.Contains($oldActiveWordBlock)) { throw "Highlighter patch point not found" }
+          $hl = $hl.Replace($oldActiveWordBlock, "")
+          [IO.File]::WriteAllText($highlighter, $hl, [Text.UTF8Encoding]::new($false))
+
+          # Apply maintained VN source files directly (no fragile search/replace patches).
+          Copy-Item "$env:GITHUB_WORKSPACE\inputs\src-patches\scenarist-desktop\UserInterfaceLayer\Settings\TemplateDialog.cpp" "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop\UserInterfaceLayer\Settings\TemplateDialog.cpp" -Force
+          Copy-Item "$env:GITHUB_WORKSPACE\inputs\src-patches\scenarist-desktop\UserInterfaceLayer\Settings\TemplateDialog.ui" "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop\UserInterfaceLayer\Settings\TemplateDialog.ui" -Force
+          Copy-Item "$env:GITHUB_WORKSPACE\inputs\src-patches\scenarist-desktop\UserInterfaceLayer\Scenario\ScenarioTextEdit\ScenarioFastFormatWidget.cpp" "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop\UserInterfaceLayer\Scenario\ScenarioTextEdit\ScenarioFastFormatWidget.cpp" -Force
+          Copy-Item "$env:GITHUB_WORKSPACE\inputs\src-patches\scenarist-core\BusinessLayer\ScenarioDocument\ScenarioTemplate.cpp" "$core\BusinessLayer\ScenarioDocument\ScenarioTemplate.cpp" -Force
+          Copy-Item "$env:GITHUB_WORKSPACE\inputs\src-patches\scenarist-core\BusinessLayer\Export\AbstractExporter.cpp" "$core\BusinessLayer\Export\AbstractExporter.cpp" -Force
+
+          $dictDir = "$env:GITHUB_WORKSPACE\czech-hunspell"
+          New-Item -ItemType Directory -Force $dictDir | Out-Null
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/LibreOffice/dictionaries/master/cs_CZ/cs_CZ.aff" -OutFile "$dictDir\cs_CZ.aff"
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/LibreOffice/dictionaries/master/cs_CZ/cs_CZ.dic" -OutFile "$dictDir\cs_CZ.dic"
+          if ((Get-Item "$dictDir\cs_CZ.aff").Length -lt 100 -or (Get-Item "$dictDir\cs_CZ.dic").Length -lt 1000) {
+              throw "Czech Hunspell dictionary download failed"
+          }
+
+      - name: Build release
+        shell: cmd
+        working-directory: upstream/src
+        run: |
+          qmake Scenarist.pro "CONFIG+=release"
+          nmake
+
+      - name: Package portable build
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $bin = "$env:GITHUB_WORKSPACE\upstream\build\Release\bin\scenarist-desktop"
+          if (!(Test-Path "$bin\Scenarist.exe")) { throw "Scenarist.exe was not built" }
+          windeployqt --release --no-translations "$bin\Scenarist.exe"
+
+          # Smoke-test the packaged executable before creating the ZIP.
+          $proc = Start-Process -FilePath "$bin\Scenarist.exe" -PassThru
+          Start-Sleep -Seconds 8
+          if ($proc.HasExited) { throw "Scenarist.exe exited during startup smoke test with code $($proc.ExitCode)" }
+          Stop-Process -Id $proc.Id -Force
+          New-Item -ItemType Directory -Force "$bin\Hunspell" | Out-Null
+          Copy-Item "$env:GITHUB_WORKSPACE\czech-hunspell\cs_CZ.aff" "$bin\Hunspell\cs_CZ.aff" -Force
+          Copy-Item "$env:GITHUB_WORKSPACE\czech-hunspell\cs_CZ.dic" "$bin\Hunspell\cs_CZ.dic" -Force
+          Copy-Item "$env:GITHUB_WORKSPACE\inputs\templates\Visual Novel CZ.kitss" "$bin\Visual Novel CZ.kitss" -Force
+          @"
+          @echo off
+          chcp 65001 >nul
+          set "TARGET=%LOCALAPPDATA%\DimkaNovikov labs.\Scenarist\Styles"
+          if not exist "%TARGET%" mkdir "%TARGET%"
+          copy /Y "%~dp0Visual Novel CZ.kitss" "%TARGET%\Visual Novel CZ.kitss" >nul
+          echo HOTOVO - sablona Visual Novel CZ byla nainstalovana.
+          pause
+          "@ | Set-Content -Encoding ASCII "$bin\INSTALOVAT_SABLONU.bat"
+          @"
+          KIT Scenarist VN CZ FIX5 - přenosná verze
+          Český překlad aplikace je zabudovaný přímo v programu.
+          Česká kontrola pravopisu je součástí balíčku.
+          V Nastavení > Kontrola pravopisu zvolte Čeština.
+          "@ | Set-Content -Encoding UTF8 "$bin\CZ_README.txt"
+          Compress-Archive -Path "$bin\*" -DestinationPath "$env:GITHUB_WORKSPACE\KIT_Scenarist_VN_CZ_FIX5.zip" -Force
+
+      - name: Upload Czech build
+        uses: actions/upload-artifact@v4
+        with:
+          name: KIT_Scenarist_VN_CZ_FIX5
+          path: KIT_Scenarist_VN_CZ_FIX5.zip
+          if-no-files-found: error
+          retention-days: 7
