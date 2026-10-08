@@ -534,12 +534,27 @@ QTextDocument* AbstractExporter::prepareDocument(const BusinessLogic::ScenarioDo
     if (_exportParameters.printTilte) {
         if (!_exportParameters.titlePageTemplateHtml.isEmpty()) {
             QString titleHtml = _exportParameters.titlePageTemplateHtml;
-            titleHtml.replace("{NAZEV}", _exportParameters.scriptName.toHtmlEscaped());
-            titleHtml.replace("{ZANR}", _exportParameters.scriptGenre.toHtmlEscaped());
-            titleHtml.replace("{AUTOR}", _exportParameters.scriptAuthor.toHtmlEscaped());
-            titleHtml.replace("{INFO}", _exportParameters.scriptAdditionalInfo.toHtmlEscaped().replace("\n", "<br>"));
-            titleHtml.replace("{KONTAKT}", _exportParameters.scriptContacts.toHtmlEscaped().replace("\n", "<br>"));
-            titleHtml.replace("{ROK}", _exportParameters.scriptYear.toHtmlEscaped());
+            const QString titleValue = _exportParameters.scriptName.toHtmlEscaped();
+            const QString genreValue = _exportParameters.scriptGenre.toHtmlEscaped();
+            const QString authorValue = _exportParameters.scriptAuthor.toHtmlEscaped();
+            const QString infoValue = _exportParameters.scriptAdditionalInfo.toHtmlEscaped().replace("\n", "<br>");
+            const QString contactValue = _exportParameters.scriptContacts.toHtmlEscaped().replace("\n", "<br>");
+            const QString yearValue = _exportParameters.scriptYear.toHtmlEscaped();
+
+            // English variable names are used by the editor from 1.02 onward.
+            titleHtml.replace("{TITLE}", titleValue);
+            titleHtml.replace("{GENRE}", genreValue);
+            titleHtml.replace("{AUTHOR}", authorValue);
+            titleHtml.replace("{INFO}", infoValue);
+            titleHtml.replace("{CONTACT}", contactValue);
+            titleHtml.replace("{YEAR}", yearValue);
+
+            // Backward compatibility with title templates created in 1.01.
+            titleHtml.replace("{NAZEV}", titleValue);
+            titleHtml.replace("{ZANR}", genreValue);
+            titleHtml.replace("{AUTOR}", authorValue);
+            titleHtml.replace("{KONTAKT}", contactValue);
+            titleHtml.replace("{ROK}", yearValue);
 
             destDocumentCursor.insertHtml(titleHtml);
             QTextBlockFormat pageBreak;
