@@ -244,8 +244,8 @@ void ScenarioCardsView::initView(bool _isDraft)
     m_sort->setIcons(QIcon(":/Graphics/Iconset/grid.svg"));
     m_sort->setToolTip(tr("Sort cards"));
 
-    m_storyMap->setText(QStringLiteral("Mapa"));
-    m_storyMap->setToolTip(QStringLiteral("Voln\u00e1 mapa sc\u00e9n s propojen\u00edm"));
+    m_storyMap->setText(tr("Story Map"));
+    m_storyMap->setToolTip(tr("Free scene map with connections"));
     m_storyMap->setCheckable(true);
     const bool storyMapMode =
             DataStorageLayer::StorageFacade::settingsStorage()->value(
