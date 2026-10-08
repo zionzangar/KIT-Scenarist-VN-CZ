@@ -84,13 +84,7 @@ void ScenarioCardsView::setBackgroundColor(const QColor& _color)
 void ScenarioCardsView::load(const QString& _xml)
 {
     if (m_cards->load(_xml)) {
-        const QString savedStoryMap =
-                DataStorageLayer::StorageFacade::settingsStorage()->value(
-                    "cards/story-map-state",
-                    DataStorageLayer::SettingsStorage::ScenarioSettings);
-        if (!savedStoryMap.isEmpty()) {
-            m_cards->restoreStoryMapState(savedStoryMap);
-        }
+        m_storyMapState = _xml;
         m_cards->setShowFlowLines(m_storyMap->isChecked());
         m_cards->saveChanges(true);
     } else {
@@ -105,6 +99,7 @@ QString ScenarioCardsView::save() const
 
 void ScenarioCardsView::restoreStoryMapState(const QString& _xml)
 {
+    m_storyMapState = _xml;
     m_cards->restoreStoryMapState(_xml);
     m_cards->setShowFlowLines(m_storyMap->isChecked());
 }
@@ -317,12 +312,11 @@ void ScenarioCardsView::initView(bool _isDraft)
 
 void ScenarioCardsView::initConnections()
 {
-    connect(m_cards, &CardsView::cardsChanged, this, &ScenarioCardsView::cardsChanged);
     connect(m_cards, &CardsView::cardsChanged, this, [this] {
-        DataStorageLayer::StorageFacade::settingsStorage()->setValue(
-            "cards/story-map-state",
-            m_cards->save(),
-            DataStorageLayer::SettingsStorage::ScenarioSettings);
+        if (m_storyMap->isChecked()) {
+            m_storyMapState = m_cards->save();
+        }
+        emit cardsChanged();
     });
 
     connect(m_cards, &CardsView::goToActRequest, this, &ScenarioCardsView::goToCardRequest);
@@ -365,24 +359,15 @@ void ScenarioCardsView::initConnections()
         auto settings = DataStorageLayer::StorageFacade::settingsStorage();
 
         if (!enabled) {
-            // Save the free-map layout BEFORE grid mode reorders the cards.
-            settings->setValue(
-                "cards/story-map-state",
-                m_cards->save(),
-                DataStorageLayer::SettingsStorage::ScenarioSettings);
+            // Save free layout before fixed/grid mode is allowed to reorder cards.
+            m_storyMapState = m_cards->save();
         }
 
         m_cards->setFixedMode(!enabled);
 
-        if (enabled) {
-            // Restore the previously saved free-map layout after leaving grid mode.
-            const QString savedStoryMap =
-                    settings->value(
-                        "cards/story-map-state",
-                        DataStorageLayer::SettingsStorage::ScenarioSettings);
-            if (!savedStoryMap.isEmpty()) {
-                m_cards->restoreStoryMapState(savedStoryMap);
-            }
+        if (enabled && !m_storyMapState.isEmpty()) {
+            // Restore exactly the last free layout after leaving grid mode.
+            m_cards->restoreStoryMapState(m_storyMapState);
         }
 
         m_cards->setShowFlowLines(enabled);
