@@ -25,7 +25,7 @@ TemplateDialog::TemplateDialog(QWidget *parent) :
     m_ui(new Ui::TemplateDialog)
 {
     m_ui->setupUi(this);
-    m_ui->lowercase->setText(QStringLiteral("\u006d\u0061\u006c\u00e1 \u0070\u00ed\u0073\u006d\u0065\u006e\u0061"));
+    m_ui->lowercase->setText(tr("Lowercase"));
     connect(m_ui->uppercase, &QCheckBox::toggled, this, [this](bool checked) { if (checked) m_ui->lowercase->setChecked(false); });
     connect(m_ui->lowercase, &QCheckBox::toggled, this, [this](bool checked) { if (checked) m_ui->uppercase->setChecked(false); });
 
