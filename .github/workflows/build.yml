@@ -311,7 +311,12 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $tag = "fix5"
-          gh release delete $tag --yes --cleanup-tag 2>$null
-          gh release create $tag "KIT_Scenarist_VN_CZ_FIX5.zip" --title "KIT Scenarist VN CZ FIX5" --notes "Portable Windows x64 build. Includes Czech UI, Czech spellcheck, Visual Novel CZ template, chapter printing, editor-template export, stable VN prefixes, and lowercase template option." --target "$env:GITHUB_SHA"
+          $repo = "zionzangar/KIT-Scenarist-VN-CZ"
+          gh release view $tag --repo $repo *> $null
+          if ($LASTEXITCODE -eq 0) {
+              gh release upload $tag "KIT_Scenarist_VN_CZ_FIX5.zip" --repo $repo --clobber
+          } else {
+              gh release create $tag "KIT_Scenarist_VN_CZ_FIX5.zip" --repo $repo --title "KIT Scenarist VN CZ FIX5" --notes "Portable Windows x64 build. Includes Czech UI, Czech spellcheck, Visual Novel CZ template, chapter printing, editor-template export, stable VN prefixes, and lowercase template option." --target "$env:GITHUB_SHA"
+          }
           if-no-files-found: error
           retention-days: 7
