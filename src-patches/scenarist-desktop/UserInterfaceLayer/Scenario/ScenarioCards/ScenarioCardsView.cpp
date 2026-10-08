@@ -241,8 +241,7 @@ void ScenarioCardsView::initView(bool _isDraft)
     const bool storyMapMode =
             DataStorageLayer::StorageFacade::settingsStorage()->value(
                 "cards/story-map-mode",
-                DataStorageLayer::SettingsStorage::ApplicationSettings)
-            .toString() != "false";
+                DataStorageLayer::SettingsStorage::ApplicationSettings) != "false";
     m_storyMap->setChecked(storyMapMode);
     m_cards->setFixedMode(!storyMapMode);
     m_cards->setShowFlowLines(storyMapMode);
