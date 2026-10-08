@@ -532,107 +532,122 @@ QTextDocument* AbstractExporter::prepareDocument(const BusinessLogic::ScenarioDo
     // Формирование титульной страницы
     //
     if (_exportParameters.printTilte) {
-        QTextCharFormat titleFormat;
-        titleFormat.setFont(exportStyle.blockStyle(ScenarioBlockStyle::Action).font());
-        QTextCharFormat headerFormat;
-        headerFormat.setFont(exportStyle.blockStyle(ScenarioBlockStyle::Action).font());
-        headerFormat.setUnderlineStyle(QTextCharFormat::SingleUnderline);
-        QTextBlockFormat leftFormat;
-        leftFormat.setAlignment(Qt::AlignLeft);
-        leftFormat.setLineHeight(
-                    TextEditHelper::fontLineHeight(titleFormat.font()),
-                    QTextBlockFormat::FixedHeight);
-        QTextBlockFormat centerFormat;
-        centerFormat.setAlignment(Qt::AlignCenter);
-        centerFormat.setLineHeight(
-                    TextEditHelper::fontLineHeight(titleFormat.font()),
-                    QTextBlockFormat::FixedHeight);
-        //
-        // ... выравниваем центрирование, чтобы было симметрично относительно боков
-        //
-        if (exportStyle.pageMargins().left() > exportStyle.pageMargins().right()) {
-            centerFormat.setRightMargin(
-                PageMetrics::mmToPx(exportStyle.pageMargins().left()
-                                    - exportStyle.pageMargins().right()));
-        } else if (exportStyle.pageMargins().left() < exportStyle.pageMargins().right()) {
-            centerFormat.setLeftMargin(
-                PageMetrics::mmToPx(exportStyle.pageMargins().right()
-                                    - exportStyle.pageMargins().left()));
-        }
-        QTextBlockFormat rightFormat;
-        rightFormat.setAlignment(Qt::AlignRight);
-        rightFormat.setLineHeight(
-                    TextEditHelper::fontLineHeight(titleFormat.font()),
-                    QTextBlockFormat::FixedHeight);
-        //
-        // Номер текущей строки
-        //
-        int currentLineNumber = 1;
-        destDocumentCursor.setBlockFormat(rightFormat);
-        destDocumentCursor.setCharFormat(titleFormat);
+        if (!_exportParameters.titlePageTemplateHtml.isEmpty()) {
+            QString titleHtml = _exportParameters.titlePageTemplateHtml;
+            titleHtml.replace("{NAZEV}", _exportParameters.scriptName.toHtmlEscaped());
+            titleHtml.replace("{ZANR}", _exportParameters.scriptGenre.toHtmlEscaped());
+            titleHtml.replace("{AUTOR}", _exportParameters.scriptAuthor.toHtmlEscaped());
+            titleHtml.replace("{INFO}", _exportParameters.scriptAdditionalInfo.toHtmlEscaped().replace("\n", "<br>"));
+            titleHtml.replace("{KONTAKT}", _exportParameters.scriptContacts.toHtmlEscaped().replace("\n", "<br>"));
+            titleHtml.replace("{ROK}", _exportParameters.scriptYear.toHtmlEscaped());
 
-        //
-        // Название [17 строка]
-        //
-        while ((currentLineNumber++) < 16) {
+            destDocumentCursor.insertHtml(titleHtml);
+            QTextBlockFormat pageBreak;
+            pageBreak.setPageBreakPolicy(QTextFormat::PageBreak_AlwaysBefore);
+            destDocumentCursor.insertBlock(pageBreak);
+        } else {
+            QTextCharFormat titleFormat;
+            titleFormat.setFont(exportStyle.blockStyle(ScenarioBlockStyle::Action).font());
+            QTextCharFormat headerFormat;
+            headerFormat.setFont(exportStyle.blockStyle(ScenarioBlockStyle::Action).font());
+            headerFormat.setUnderlineStyle(QTextCharFormat::SingleUnderline);
+            QTextBlockFormat leftFormat;
+            leftFormat.setAlignment(Qt::AlignLeft);
+            leftFormat.setLineHeight(
+                        TextEditHelper::fontLineHeight(titleFormat.font()),
+                        QTextBlockFormat::FixedHeight);
+            QTextBlockFormat centerFormat;
+            centerFormat.setAlignment(Qt::AlignCenter);
+            centerFormat.setLineHeight(
+                        TextEditHelper::fontLineHeight(titleFormat.font()),
+                        QTextBlockFormat::FixedHeight);
+            //
+            // ... выравниваем центрирование, чтобы было симметрично относительно боков
+            //
+            if (exportStyle.pageMargins().left() > exportStyle.pageMargins().right()) {
+                centerFormat.setRightMargin(
+                    PageMetrics::mmToPx(exportStyle.pageMargins().left()
+                                        - exportStyle.pageMargins().right()));
+            } else if (exportStyle.pageMargins().left() < exportStyle.pageMargins().right()) {
+                centerFormat.setLeftMargin(
+                    PageMetrics::mmToPx(exportStyle.pageMargins().right()
+                                        - exportStyle.pageMargins().left()));
+            }
+            QTextBlockFormat rightFormat;
+            rightFormat.setAlignment(Qt::AlignRight);
+            rightFormat.setLineHeight(
+                        TextEditHelper::fontLineHeight(titleFormat.font()),
+                        QTextBlockFormat::FixedHeight);
+            //
+            // Номер текущей строки
+            //
+            int currentLineNumber = 1;
+            destDocumentCursor.setBlockFormat(rightFormat);
+            destDocumentCursor.setCharFormat(titleFormat);
+    
+            //
+            // Название [17 строка]
+            //
+            while ((currentLineNumber++) < 16) {
+                insertLine(destDocumentCursor, centerFormat, headerFormat);
+            }
             insertLine(destDocumentCursor, centerFormat, headerFormat);
+            destDocumentCursor.insertText(TextEditHelper::smartToUpper(_exportParameters.scriptName));
+            //
+            // Две строки отступа от заголовка
+            //
+            insertLine(destDocumentCursor, centerFormat, titleFormat);
+            insertLine(destDocumentCursor, centerFormat, titleFormat);
+            //
+            // Жанр [через одну под предыдущим]
+            //
+            if (!_exportParameters.scriptGenre.isEmpty()) {
+                insertLine(destDocumentCursor, centerFormat, titleFormat);
+                insertLine(destDocumentCursor, centerFormat, titleFormat);
+                destDocumentCursor.insertText(_exportParameters.scriptGenre);
+                currentLineNumber += 2;
+            }
+            //
+            // Автор [через одну под предыдущим]
+            //
+            if (!_exportParameters.scriptAuthor.isEmpty()) {
+                insertLine(destDocumentCursor, centerFormat, titleFormat);
+                insertLine(destDocumentCursor, centerFormat, titleFormat);
+                destDocumentCursor.insertText(_exportParameters.scriptAuthor);
+                currentLineNumber += 2;
+            }
+            //
+            // Доп. инфо [через одну под предыдущим]
+            //
+            if (!_exportParameters.scriptAdditionalInfo.isEmpty()) {
+                insertLine(destDocumentCursor, centerFormat, titleFormat);
+                insertLine(destDocumentCursor, centerFormat, titleFormat);
+                destDocumentCursor.insertText(_exportParameters.scriptAdditionalInfo);
+                currentLineNumber += 2;
+            }
+            //
+            // необходимое количество пустых строк до 37ой
+            //
+            while ((currentLineNumber++) < 37) {
+                insertLine(destDocumentCursor, centerFormat, titleFormat);
+            }
+            //
+            // Контакты [38 строка]
+            //
+            insertLine(destDocumentCursor, leftFormat, titleFormat);
+            destDocumentCursor.insertText(_exportParameters.scriptContacts);
+    
+            //
+            // Год печатается на последней строке документа
+            //
+            LineType currentLineType = currentLine(preparedDocument, centerFormat, titleFormat);
+            while (currentLineType != LastPageLine) {
+                ++currentLineNumber;
+                insertLine(destDocumentCursor, centerFormat, titleFormat);
+                currentLineType = currentLine(preparedDocument, centerFormat, titleFormat);
+            }
+            destDocumentCursor.insertText(_exportParameters.scriptYear);
         }
-        insertLine(destDocumentCursor, centerFormat, headerFormat);
-        destDocumentCursor.insertText(TextEditHelper::smartToUpper(_exportParameters.scriptName));
-        //
-        // Две строки отступа от заголовка
-        //
-        insertLine(destDocumentCursor, centerFormat, titleFormat);
-        insertLine(destDocumentCursor, centerFormat, titleFormat);
-        //
-        // Жанр [через одну под предыдущим]
-        //
-        if (!_exportParameters.scriptGenre.isEmpty()) {
-            insertLine(destDocumentCursor, centerFormat, titleFormat);
-            insertLine(destDocumentCursor, centerFormat, titleFormat);
-            destDocumentCursor.insertText(_exportParameters.scriptGenre);
-            currentLineNumber += 2;
-        }
-        //
-        // Автор [через одну под предыдущим]
-        //
-        if (!_exportParameters.scriptAuthor.isEmpty()) {
-            insertLine(destDocumentCursor, centerFormat, titleFormat);
-            insertLine(destDocumentCursor, centerFormat, titleFormat);
-            destDocumentCursor.insertText(_exportParameters.scriptAuthor);
-            currentLineNumber += 2;
-        }
-        //
-        // Доп. инфо [через одну под предыдущим]
-        //
-        if (!_exportParameters.scriptAdditionalInfo.isEmpty()) {
-            insertLine(destDocumentCursor, centerFormat, titleFormat);
-            insertLine(destDocumentCursor, centerFormat, titleFormat);
-            destDocumentCursor.insertText(_exportParameters.scriptAdditionalInfo);
-            currentLineNumber += 2;
-        }
-        //
-        // необходимое количество пустых строк до 37ой
-        //
-        while ((currentLineNumber++) < 37) {
-            insertLine(destDocumentCursor, centerFormat, titleFormat);
-        }
-        //
-        // Контакты [38 строка]
-        //
-        insertLine(destDocumentCursor, leftFormat, titleFormat);
-        destDocumentCursor.insertText(_exportParameters.scriptContacts);
-
-        //
-        // Год печатается на последней строке документа
-        //
-        LineType currentLineType = currentLine(preparedDocument, centerFormat, titleFormat);
-        while (currentLineType != LastPageLine) {
-            ++currentLineNumber;
-            insertLine(destDocumentCursor, centerFormat, titleFormat);
-            currentLineType = currentLine(preparedDocument, centerFormat, titleFormat);
-        }
-        destDocumentCursor.insertText(_exportParameters.scriptYear);
     }
 
 
