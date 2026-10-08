@@ -53,7 +53,7 @@ ExportDialog::ExportDialog(QWidget* _parent) :
 {
     m_ui->setupUi(this);
 
-    m_titlePageEditorButton = new QPushButton(QStringLiteral("Editor titulní stránky"), this);
+    m_titlePageEditorButton = new QPushButton(tr("Title page editor"), this);
     m_ui->gridLayout_2->addWidget(m_titlePageEditorButton, 8, 0, 1, 4);
     connect(m_titlePageEditorButton, &QPushButton::clicked, this, &ExportDialog::editTitlePageTemplate);
     connect(m_ui->printTitle, &QCheckBox::toggled, m_titlePageEditorButton, &QPushButton::setEnabled);
@@ -445,14 +445,14 @@ void ExportDialog::updateParametersVisibility()
 void ExportDialog::editTitlePageTemplate()
 {
     QDialog dialog(this);
-    dialog.setWindowTitle(QStringLiteral("Editor titulní stránky"));
+    dialog.setWindowTitle(tr("Title page editor"));
     dialog.resize(760, 860);
 
     QVBoxLayout* layout = new QVBoxLayout(&dialog);
 
     QLabel* help = new QLabel(
-        QStringLiteral("Použitelné proměnné: {NAZEV}, {ZANR}, {AUTOR}, {INFO}, {KONTAKT}, {ROK}. "
-                       "Můžete přidat i libovolný vlastní text."), &dialog);
+        tr("Available variables: {TITLE}, {GENRE}, {AUTHOR}, {INFO}, {CONTACT}, {YEAR}. "
+           "You can also add any custom text."), &dialog);
     help->setWordWrap(true);
     layout->addWidget(help);
 
@@ -464,9 +464,9 @@ void ExportDialog::editTitlePageTemplate()
     QAction* underline = toolbar->addAction(QStringLiteral("U"));
     underline->setCheckable(true);
     toolbar->addSeparator();
-    QAction* alignLeft = toolbar->addAction(QStringLiteral("Vlevo"));
-    QAction* alignCenter = toolbar->addAction(QStringLiteral("Střed"));
-    QAction* alignRight = toolbar->addAction(QStringLiteral("Vpravo"));
+    QAction* alignLeft = toolbar->addAction(tr("Left"));
+    QAction* alignCenter = toolbar->addAction(tr("Center"));
+    QAction* alignRight = toolbar->addAction(tr("Right"));
     toolbar->addSeparator();
 
     QComboBox* fontSize = new QComboBox(toolbar);
@@ -477,9 +477,9 @@ void ExportDialog::editTitlePageTemplate()
 
     toolbar->addSeparator();
     QComboBox* placeholder = new QComboBox(toolbar);
-    placeholder->addItems({ "{NAZEV}", "{ZANR}", "{AUTOR}", "{INFO}", "{KONTAKT}", "{ROK}" });
+    placeholder->addItems({ "{TITLE}", "{GENRE}", "{AUTHOR}", "{INFO}", "{CONTACT}", "{YEAR}" });
     toolbar->addWidget(placeholder);
-    QPushButton* insertPlaceholder = new QPushButton(QStringLiteral("Vložit proměnnou"), toolbar);
+    QPushButton* insertPlaceholder = new QPushButton(tr("Insert variable"), toolbar);
     toolbar->addWidget(insertPlaceholder);
     layout->addWidget(toolbar);
 
@@ -489,12 +489,12 @@ void ExportDialog::editTitlePageTemplate()
         editor->setHtml(
             QStringLiteral(
                 "<p align='center'><br><br><br><br><br><br><br><br><br><br>"
-                "<span style='font-size:18pt; font-weight:600; text-decoration:underline;'>{NAZEV}</span></p>"
-                "<p align='center'><br><span style='font-size:11pt;'>{ZANR}</span></p>"
-                "<p align='center'><br><br><span style='font-size:11pt;'>{AUTOR}</span></p>"
+                "<span style='font-size:18pt; font-weight:600; text-decoration:underline;'>{TITLE}</span></p>"
+                "<p align='center'><br><span style='font-size:11pt;'>{GENRE}</span></p>"
+                "<p align='center'><br><br><span style='font-size:11pt;'>{AUTHOR}</span></p>"
                 "<p align='left'><br><br><br><br><br><br><br><br>{INFO}</p>"
-                "<p align='left'>{KONTAKT}</p>"
-                "<p align='center'><br>{ROK}</p>"));
+                "<p align='left'>{CONTACT}</p>"
+                "<p align='center'><br>{YEAR}</p>"));
     } else {
         editor->setHtml(m_titlePageTemplateHtml);
     }
