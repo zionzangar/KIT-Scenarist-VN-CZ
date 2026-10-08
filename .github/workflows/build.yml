@@ -318,8 +318,11 @@ jobs:
           $ErrorActionPreference = "Stop"
           $tag = "fix6"
           $repo = "zionzangar/KIT-Scenarist-VN-CZ"
-          gh release view $tag --repo $repo *> $null
-          if ($LASTEXITCODE -eq 0) {
+          $ErrorActionPreference = "Continue"
+          & gh release view $tag --repo $repo *> $null
+          $exists = ($LASTEXITCODE -eq 0)
+          $ErrorActionPreference = "Stop"
+          if ($exists) {
               gh release upload $tag "KIT_Scenarist_VN_CZ_FIX6.zip" --repo $repo --clobber
           } else {
               gh release create $tag "KIT_Scenarist_VN_CZ_FIX6.zip" --repo $repo --title "KIT Scenarist VN CZ FIX6" --notes "Portable Windows x64 build. Includes Czech UI, Czech spellcheck, Visual Novel CZ template, chapter printing, editor-template export, stable VN prefixes, lowercase template option, free Story Map mode, and flow connector arrows." --target "$env:GITHUB_SHA"
