@@ -91,6 +91,7 @@ void ScenarioCardsView::load(const QString& _xml)
         if (!savedStoryMap.isEmpty()) {
             m_cards->restoreStoryMapState(savedStoryMap);
         }
+        m_cards->setShowFlowLines(m_storyMap->isChecked());
         m_cards->saveChanges(true);
     } else {
         emit schemeNotLoaded();
@@ -105,6 +106,7 @@ QString ScenarioCardsView::save() const
 void ScenarioCardsView::restoreStoryMapState(const QString& _xml)
 {
     m_cards->restoreStoryMapState(_xml);
+    m_cards->setShowFlowLines(m_storyMap->isChecked());
 }
 
 void ScenarioCardsView::saveToImage()
