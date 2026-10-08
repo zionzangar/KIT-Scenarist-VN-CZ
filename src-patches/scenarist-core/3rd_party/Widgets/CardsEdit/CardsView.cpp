@@ -167,6 +167,11 @@ bool CardsView::load(const QString& _xml)
     return m_scene->load(_xml);
 }
 
+void CardsView::restoreStoryMapState(const QString& _xml)
+{
+    m_scene->restoreStoryMapState(_xml);
+}
+
 bool CardsView::needSyncUndo() const
 {
     return m_undoStack->needSyncUndo();
