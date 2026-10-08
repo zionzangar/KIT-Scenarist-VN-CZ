@@ -84,6 +84,13 @@ void ScenarioCardsView::setBackgroundColor(const QColor& _color)
 void ScenarioCardsView::load(const QString& _xml)
 {
     if (m_cards->load(_xml)) {
+        const QString savedStoryMap =
+                DataStorageLayer::StorageFacade::settingsStorage()->value(
+                    "cards/story-map-state",
+                    DataStorageLayer::SettingsStorage::ScenarioSettings);
+        if (!savedStoryMap.isEmpty()) {
+            m_cards->restoreStoryMapState(savedStoryMap);
+        }
         m_cards->saveChanges(true);
     } else {
         emit schemeNotLoaded();
@@ -304,6 +311,12 @@ void ScenarioCardsView::initView(bool _isDraft)
 void ScenarioCardsView::initConnections()
 {
     connect(m_cards, &CardsView::cardsChanged, this, &ScenarioCardsView::cardsChanged);
+    connect(m_cards, &CardsView::cardsChanged, this, [this] {
+        DataStorageLayer::StorageFacade::settingsStorage()->setValue(
+            "cards/story-map-state",
+            m_cards->save(),
+            DataStorageLayer::SettingsStorage::ScenarioSettings);
+    });
 
     connect(m_cards, &CardsView::goToActRequest, this, &ScenarioCardsView::goToCardRequest);
     connect(m_cards, &CardsView::goToCardRequest, this, &ScenarioCardsView::goToCardRequest);
