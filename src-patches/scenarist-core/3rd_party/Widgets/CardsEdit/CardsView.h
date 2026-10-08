@@ -142,6 +142,11 @@ public:
      */
     bool load(const QString& _xml);
 
+    /**
+     * @brief Restore only saved story-map positions and manual links.
+     */
+    void restoreStoryMapState(const QString& _xml);
+
     // ****
     // Методы для работы непосредственно с доской
 
