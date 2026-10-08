@@ -102,6 +102,11 @@ QString ScenarioCardsView::save() const
     return m_cards->save();
 }
 
+void ScenarioCardsView::restoreStoryMapState(const QString& _xml)
+{
+    m_cards->restoreStoryMapState(_xml);
+}
+
 void ScenarioCardsView::saveToImage()
 {
     const QString saveFilePath = DataStorageLayer::StorageFacade::settingsStorage()->documentFilePath(CARDS_FOLDER_KEY, tr("Cards.png"));
