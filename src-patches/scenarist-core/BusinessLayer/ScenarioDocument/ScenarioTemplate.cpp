@@ -477,6 +477,11 @@ ScenarioBlockStyle::ScenarioBlockStyle(const QXmlStreamAttributes& _blockAttribu
     // Настроим остальные характеристики
     //
     switch (m_type) {
+        case SceneHeading:
+        case SceneCharacters: {
+            m_charFormat.setProperty(ScenarioBlockStyle::PropertyIsFirstUppercase, false);
+            break;
+        }
         case Parenthetical: {
             m_charFormat.setProperty(ScenarioBlockStyle::PropertyIsFirstUppercase, false);
             //
