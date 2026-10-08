@@ -440,6 +440,16 @@ void ScenarioManager::closeCurrentProject()
     m_saveChangesTimer.stop();
 
     //
+    // Before clearing the Cards manager, force the current Story Map state
+    // into persistent project storage. This is the final safety net for
+    // closing/reopening the project or the whole application.
+    //
+    if (m_scenario->scenario() != nullptr) {
+        m_scenario->scenario()->setScheme(m_cardsManager->save());
+        DataStorageLayer::StorageFacade::scenarioStorage()->storeScenario(m_scenario->scenario());
+    }
+
+    //
     // Очистим от предыдущих данных
     //
     m_cardsManager->clear();
@@ -1330,10 +1340,11 @@ void ScenarioManager::initConnections()
     });
     connect(m_scenarioDraft, &ScenarioDocument::textChanged, this, &ScenarioManager::scenarioChanged);
     connect(m_cardsManager, &ScenarioCardsManager::cardsChanged, this, [this] {
-        // Persist the current Story Map XML into the scenario immediately.
-        // This keeps card positions and manual links durable across application restarts,
-        // not only after an explicit scenario save cycle.
+        // Persist the Story Map immediately into the project's scenario database.
+        // Merely calling setScheme() is not enough: if the project is closed before
+        // the normal save cycle, the map layout would otherwise be lost.
         m_scenario->scenario()->setScheme(m_cardsManager->save());
+        DataStorageLayer::StorageFacade::scenarioStorage()->storeScenario(m_scenario->scenario());
         scenarioChanged();
     });
     connect(m_sceneDescriptionManager, &ScenarioSceneDescriptionManager::titleChanged, this, &ScenarioManager::scenarioChanged);
