@@ -141,6 +141,26 @@ jobs:
               "UserInterface::TemplateDialog": {
                   "Lowercase": "Mal\u00e1 p\u00edsmena",
               },
+              "AssetGalleryWidget": {
+                  "Visual assets": "Obrazov\u00e9 materi\u00e1ly",
+                  "Add images": "P\u0159idat obr\u00e1zky",
+                  "Open asset folder": "Otev\u0159\u00edt slo\u017eku s obr\u00e1zky",
+                  "Status:": "Stav:",
+                  "Concept": "Koncept",
+                  "Work in progress": "Rozpracov\u00e1no",
+                  "Final": "Fin\u00e1ln\u00ed",
+                  "For game": "Pro hru",
+                  "Set as main": "Nastavit jako hlavn\u00ed",
+                  "Remove image": "Odebrat obr\u00e1zek",
+                  "Remove the selected image from the project library?": "Odebrat vybran\u00fd obr\u00e1zek z projektov\u00e9 knihovny?",
+                  "Image error": "Chyba obr\u00e1zku",
+                  "Could not remove the image file.": "Soubor obr\u00e1zku nelze odstranit.",
+                  "Could not create the project asset folder.": "Nelze vytvo\u0159it projektovou slo\u017eku pro obr\u00e1zky.",
+                  "Could not save image metadata.": "Nelze ulo\u017eit metadata obr\u00e1zk\u016f.",
+                  "Save the project before adding images.": "P\u0159ed p\u0159id\u00e1n\u00edm obr\u00e1zk\u016f ulo\u017ete projekt.",
+                  "Images (*.png *.jpg *.jpeg *.webp *.bmp)": "Obr\u00e1zky (*.png *.jpg *.jpeg *.webp *.bmp)",
+                  "Could not copy an image into the project.": "Obr\u00e1zek nelze zkop\u00edrovat do projektu.",
+              },
           }
 
           contexts_by_name = {
@@ -302,6 +322,8 @@ jobs:
           Copy-Item "$env:GITHUB_WORKSPACE\inputs\src-patches\scenarist-desktop\ManagementLayer\Scenario\ScenarioManager.cpp" "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop\ManagementLayer\Scenario\ScenarioManager.cpp" -Force
           Copy-Item "$env:GITHUB_WORKSPACE\inputs\src-patches\scenarist-desktop\ManagementLayer\ApplicationManager.cpp" "$env:GITHUB_WORKSPACE\upstream\src\bin\scenarist-desktop\ManagementLayer\ApplicationManager.cpp" -Force
 
+          python "$env:GITHUB_WORKSPACE\inputs\src-patches\apply_asset_gallery.py"
+
           $dictDir = "$env:GITHUB_WORKSPACE\czech-hunspell"
           New-Item -ItemType Directory -Force $dictDir | Out-Null
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/LibreOffice/dictionaries/master/cs_CZ/cs_CZ.aff" -OutFile "$dictDir\cs_CZ.aff"
@@ -344,18 +366,18 @@ jobs:
           pause
           "@ | Set-Content -Encoding ASCII "$bin\INSTALOVAT_SABLONU.bat"
           @"
-          KIT Scenarist VN CZ 1.02 - přenosná verze
+          KIT Scenarist VN CZ 1.03 - přenosná verze
           Český překlad aplikace je zabudovaný přímo v programu.
           Česká kontrola pravopisu je součástí balíčku.
           V Nastavení > Kontrola pravopisu zvolte Čeština.
           "@ | Set-Content -Encoding UTF8 "$bin\CZ_README.txt"
-          Compress-Archive -Path "$bin\*" -DestinationPath "$env:GITHUB_WORKSPACE\KIT_Scenarist_VN_CZ_1.02.zip" -Force
+          Compress-Archive -Path "$bin\*" -DestinationPath "$env:GITHUB_WORKSPACE\KIT_Scenarist_VN_CZ_1.03.zip" -Force
 
       - name: Upload Czech build
         uses: actions/upload-artifact@v4
         with:
-          name: KIT_Scenarist_VN_CZ_1.02
-          path: KIT_Scenarist_VN_CZ_1.02.zip
+          name: KIT_Scenarist_VN_CZ_1.03
+          path: KIT_Scenarist_VN_CZ_1.03.zip
 
       - name: Publish GitHub Release
         shell: powershell
@@ -363,14 +385,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
-          $tag = "v1.02"
+          $tag = "v1.03"
           $repo = "zionzangar/KIT-Scenarist-VN-CZ"
           $ErrorActionPreference = "Continue"
           & gh release view $tag --repo $repo *> $null
           $exists = ($LASTEXITCODE -eq 0)
           $ErrorActionPreference = "Stop"
           if ($exists) {
-              gh release upload $tag "KIT_Scenarist_VN_CZ_1.02.zip" --repo $repo --clobber
+              gh release upload $tag "KIT_Scenarist_VN_CZ_1.03.zip" --repo $repo --clobber
           } else {
-              gh release create $tag "KIT_Scenarist_VN_CZ_1.02.zip" --repo $repo --title "KIT Scenarist VN CZ 1.02" --notes "KIT Scenarist VN CZ 1.02. Adds a rich-text title-page editor with placeholders, preserves Story Map functionality, and exposes Czech in the language selector while keeping English." --target "$env:GITHUB_SHA"
+              gh release create $tag "KIT_Scenarist_VN_CZ_1.03.zip" --repo $repo --title "KIT Scenarist VN CZ 1.03" --notes "KIT Scenarist VN CZ 1.03. Adds a rich-text title-page editor with placeholders, preserves Story Map functionality, and exposes Czech in the language selector while keeping English." --target "$env:GITHUB_SHA"
           }
