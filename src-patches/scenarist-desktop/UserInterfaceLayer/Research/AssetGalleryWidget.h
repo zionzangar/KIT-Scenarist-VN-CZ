@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QListWidget>
+#include <QScrollBar>
 #include <QComboBox>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -51,12 +52,17 @@ public:
 
         m_list = new QListWidget(this);
         m_list->setViewMode(QListView::IconMode);
+        m_list->setFlow(QListView::LeftToRight);
+        m_list->setWrapping(false);
+        m_list->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        m_list->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        m_list->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         m_list->setIconSize(QSize(110, 88));
         m_list->setResizeMode(QListView::Adjust);
         m_list->setSpacing(6);
-        m_list->setMinimumHeight(145);
+        m_list->setFixedHeight(122);
         m_list->setSelectionMode(QAbstractItemView::SingleSelection);
-        main->addWidget(m_list);
+        main->addWidget(m_list, 0);
 
         auto* edit = new QHBoxLayout;
         edit->addWidget(new QLabel(tr("Status:"), this));
@@ -71,7 +77,9 @@ public:
         edit->addWidget(m_primary);
         edit->addWidget(m_remove);
         edit->addStretch();
-        main->addLayout(edit);
+        main->addLayout(edit, 0);
+        main->setSizeConstraint(QLayout::SetMinimumSize);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         m_preview = new QLabel(this);
         m_preview->setAlignment(Qt::AlignCenter);
         m_preview->setMinimumSize(240, 220);
