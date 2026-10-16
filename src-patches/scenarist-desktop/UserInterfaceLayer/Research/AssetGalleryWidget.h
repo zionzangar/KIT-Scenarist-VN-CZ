@@ -22,6 +22,12 @@
 #include <QUrl>
 #include <QUuid>
 #include <QImageReader>
+#include <QDialog>
+#include <QScrollArea>
+#include <QScreen>
+#include <QApplication>
+#include <QEvent>
+#include <QMouseEvent>
 
 // VN CZ: a project-relative image library. No external absolute paths
 // are stored, and the SQLite .kitsp database is never modified.
@@ -68,9 +74,12 @@ public:
         main->addLayout(edit);
         m_preview = new QLabel(this);
         m_preview->setAlignment(Qt::AlignCenter);
-        m_preview->setMinimumHeight(100);
-        m_preview->setMaximumHeight(220);
-        main->addWidget(m_preview);
+        m_preview->setMinimumSize(240, 220);
+        m_preview->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        m_preview->setToolTip(tr("Click to enlarge"));
+        m_preview->installEventFilter(this);
+        // The preview is placed beside the text editor by the ResearchView patch.
+        // Keep it parented here until the layout adopts it.
 
         connect(add, &QPushButton::clicked, this, [this] { addImages(); });
         connect(folder, &QPushButton::clicked, this, [this] {
@@ -80,6 +89,7 @@ public:
             QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
         });
         connect(m_list, &QListWidget::currentRowChanged, this, [this](int) { showSelected(); });
+        connect(m_list, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem*) { enlargeSelected(); });
         connect(m_status, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
             const int index = m_list->currentRow();
             if (m_loading || index < 0 || index >= m_items.size()) return;
@@ -130,6 +140,8 @@ public:
         showSelected();
     }
 
+    QWidget* previewWidget() const { return m_preview; }
+
     void setContext(const QString& projectFile, const QString& kind, int id)
     {
         const QString key = projectFile + "|" + kind + "|" + QString::number(id);
@@ -149,7 +161,47 @@ public:
         refresh();
     }
 
+protected:
+    bool eventFilter(QObject* object, QEvent* event) override
+    {
+        if (object == m_preview) {
+            if (event->type() == QEvent::Resize) updatePreview();
+            if (event->type() == QEvent::MouseButtonRelease && !m_selectedImage.isNull()) {
+                enlargeSelected();
+                return true;
+            }
+        }
+        return QWidget::eventFilter(object, event);
+    }
+
 private:
+    void updatePreview()
+    {
+        if (m_selectedImage.isNull()) { m_preview->clear(); return; }
+        m_preview->setPixmap(m_selectedImage.scaled(m_preview->size(),
+            Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    }
+
+    void enlargeSelected()
+    {
+        if (m_selectedImage.isNull()) return;
+        QDialog dialog(this);
+        dialog.setWindowTitle(tr("Image preview"));
+        auto* layout = new QVBoxLayout(&dialog);
+        auto* scroll = new QScrollArea(&dialog);
+        scroll->setWidgetResizable(true);
+        auto* imageLabel = new QLabel(scroll);
+        imageLabel->setAlignment(Qt::AlignCenter);
+        imageLabel->setPixmap(m_selectedImage);
+        imageLabel->resize(m_selectedImage.size());
+        scroll->setWidget(imageLabel);
+        layout->addWidget(scroll);
+        const QRect bounds = QApplication::primaryScreen()->availableGeometry();
+        dialog.resize(qMin(bounds.width() - 80, qMax(700, m_selectedImage.width())),
+                      qMin(bounds.height() - 80, qMax(500, m_selectedImage.height())));
+        dialog.exec();
+    }
+
     static QString tr(const char* text)
     {
         return QCoreApplication::translate("AssetGalleryWidget", text);
@@ -230,8 +282,16 @@ private:
             m_list->addItem(viewItem);
         }
         m_loading = false;
-        if (m_list->count()) m_list->setCurrentRow(0);
-        else showSelected();
+        if (m_list->count()) {
+            int initialIndex = 0;
+            for (int i = 0; i < m_items.size(); ++i) {
+                if (m_items.at(i).toObject().value("primary").toBool()) {
+                    initialIndex = i;
+                    break;
+                }
+            }
+            m_list->setCurrentRow(initialIndex);
+        } else showSelected();
     }
 
     void showSelected()
@@ -241,6 +301,7 @@ private:
         m_status->setEnabled(selected);
         m_remove->setEnabled(selected);
         m_primary->setEnabled(selected);
+        m_selectedImage = QPixmap();
         m_preview->clear();
         if (!selected) return;
         const QJsonObject item = m_items.at(index).toObject();
@@ -248,9 +309,8 @@ private:
         const int statusIndex = m_status->findData(item.value("status").toString());
         m_status->setCurrentIndex(statusIndex >= 0 ? statusIndex : 0);
         m_loading = false;
-        const QPixmap image(QDir(galleryDir()).filePath(item.value("file").toString()));
-        if (!image.isNull()) m_preview->setPixmap(image.scaled(
-            QSize(600, 210), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        m_selectedImage.load(QDir(galleryDir()).filePath(item.value("file").toString()));
+        updatePreview();
     }
 
     QString m_key;
@@ -264,6 +324,7 @@ private:
     QPushButton* m_primary = nullptr;
     QPushButton* m_remove = nullptr;
     QLabel* m_preview = nullptr;
+    QPixmap m_selectedImage;
 };
 
 #endif // VN_ASSET_GALLERY_WIDGET_H
