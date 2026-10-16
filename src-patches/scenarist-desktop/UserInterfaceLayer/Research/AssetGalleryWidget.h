@@ -2,6 +2,7 @@
 #define VN_ASSET_GALLERY_WIDGET_H
 
 #include <QWidget>
+#include <QCoreApplication>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -149,6 +150,11 @@ public:
     }
 
 private:
+    static QString tr(const char* text)
+    {
+        return QCoreApplication::translate("AssetGalleryWidget", text);
+    }
+
     QString galleryDir() const
     {
         if (m_projectFile.isEmpty() || m_id <= 0 || m_kind.isEmpty()) return QString();
