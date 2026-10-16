@@ -223,7 +223,7 @@ private:
             const QString imagePath = QDir(dir).filePath(item.value("file").toString());
             QPixmap image(imagePath);
             QString caption = item.value("name").toString();
-            if (item.value("primary").toBool()) caption = QString::fromUtf8("★ ") + caption;
+            if (item.value("primary").toBool()) caption = QString(QChar(0x2605)) + " " + caption;
             auto* viewItem = new QListWidgetItem(QIcon(image.scaled(
                 QSize(110, 88), Qt::KeepAspectRatio, Qt::SmoothTransformation)), caption);
             viewItem->setToolTip(caption + " (" + item.value("status").toString() + ")");
