@@ -78,7 +78,6 @@ public:
         edit->addWidget(m_remove);
         edit->addStretch();
         main->addLayout(edit, 0);
-        main->setSizeConstraint(QLayout::SetMinimumSize);
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         m_preview = new QLabel(this);
         m_preview->setAlignment(Qt::AlignCenter);
