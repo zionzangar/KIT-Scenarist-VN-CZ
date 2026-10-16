@@ -370,6 +370,10 @@ jobs:
           Český překlad aplikace je zabudovaný přímo v programu.
           Česká kontrola pravopisu je součástí balíčku.
           V Nastavení > Kontrola pravopisu zvolte Čeština.
+          Galerie postav a lokací ukládají obrázky do složky <název projektu>_assets vedle souboru .kitsp.
+          Při zálohování či přenosu kopírujte soubor .kitsp i celou složku _assets.
+          Uložte projekt před prvním přidáním obrázků.
+          Stávající původní galerie zůstávají nezměněné.
           "@ | Set-Content -Encoding UTF8 "$bin\CZ_README.txt"
           Compress-Archive -Path "$bin\*" -DestinationPath "$env:GITHUB_WORKSPACE\KIT_Scenarist_VN_CZ_1.03.zip" -Force
 
@@ -394,5 +398,5 @@ jobs:
           if ($exists) {
               gh release upload $tag "KIT_Scenarist_VN_CZ_1.03.zip" --repo $repo --clobber
           } else {
-              gh release create $tag "KIT_Scenarist_VN_CZ_1.03.zip" --repo $repo --title "KIT Scenarist VN CZ 1.03" --notes "KIT Scenarist VN CZ 1.03. Adds a rich-text title-page editor with placeholders, preserves Story Map functionality, and exposes Czech in the language selector while keeping English." --target "$env:GITHUB_SHA"
+              gh release create $tag "KIT_Scenarist_VN_CZ_1.03.zip" --repo $repo --title "KIT Scenarist VN CZ 1.03" --notes "KIT Scenarist VN CZ 1.03. Adds per-character and per-location visual asset galleries, stored in project-relative folders adjacent to .kitsp with Czech/English UI. Keeps the existing Story Map and title-page editor." --target "$env:GITHUB_SHA"
           }
