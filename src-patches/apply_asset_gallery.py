@@ -44,15 +44,31 @@ edit(view_h,
 view_cpp = header_dir / "ResearchView.cpp"
 edit(view_cpp,
      '#include "ResearchView.h"\n',
-     '#include "ResearchView.h"\n#include "AssetGalleryWidget.h"\n')
+     '#include "ResearchView.h"\n#include "AssetGalleryWidget.h"\n#include <QSplitter>\n')
 edit(view_cpp,
      "    m_ui->setupUi(this);\n\n    initView();",
      """    m_ui->setupUi(this);
 
     m_characterAssets = new AssetGalleryWidget(m_ui->characterEdit);
-    m_ui->characterEdit->layout()->addWidget(m_characterAssets);
     m_locationAssets = new AssetGalleryWidget(m_ui->locationEdit);
-    m_ui->locationEdit->layout()->addWidget(m_locationAssets);
+
+    // Place the large preview to the right of the existing description editor.
+    // Gallery thumbnails and controls remain below that two-column area.
+    auto attachPreview = [](QWidget* panel, QWidget* editor, AssetGalleryWidget* gallery) {
+        QLayout* outer = panel->layout();
+        const int descriptionPosition = outer->indexOf(editor);
+        outer->removeWidget(editor);
+        auto* split = new QSplitter(Qt::Horizontal, panel);
+        split->addWidget(editor);
+        split->addWidget(gallery->previewWidget());
+        split->setStretchFactor(0, 3);
+        split->setStretchFactor(1, 2);
+        split->setSizes(QList<int>() << 680 << 430);
+        outer->insertWidget(descriptionPosition, split);
+        outer->addWidget(gallery);
+    };
+    attachPreview(m_ui->characterEdit, m_ui->characterDescription, m_characterAssets);
+    attachPreview(m_ui->locationEdit, m_ui->locationDescription, m_locationAssets);
 
     initView();""")
 edit(view_cpp,
