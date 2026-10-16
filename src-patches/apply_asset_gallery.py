@@ -59,13 +59,18 @@ edit(view_cpp,
         const int descriptionPosition = outer->indexOf(editor);
         outer->removeWidget(editor);
         auto* split = new QSplitter(Qt::Horizontal, panel);
+        split->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         split->addWidget(editor);
         split->addWidget(gallery->previewWidget());
         split->setStretchFactor(0, 3);
         split->setStretchFactor(1, 2);
         split->setSizes(QList<int>() << 680 << 430);
-        outer->insertWidget(descriptionPosition, split);
-        outer->addWidget(gallery);
+        outer->insertWidget(descriptionPosition, split, 1);
+        // All the available vertical space belongs to the description and preview.
+        // Labels and input fields keep their original compact preferred heights.
+        for (int i = 0; i < outer->count(); ++i)
+            outer->setStretch(i, i == descriptionPosition ? 1 : 0);
+        outer->addWidget(gallery, 0);
     };
     attachPreview(m_ui->characterEdit, m_ui->characterDescription, m_characterAssets);
     attachPreview(m_ui->locationEdit, m_ui->locationDescription, m_locationAssets);
