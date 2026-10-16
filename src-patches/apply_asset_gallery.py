@@ -55,7 +55,7 @@ edit(view_cpp,
     // Place the large preview to the right of the existing description editor.
     // Gallery thumbnails and controls remain below that two-column area.
     auto attachPreview = [](QWidget* panel, QWidget* editor, AssetGalleryWidget* gallery) {
-        QLayout* outer = panel->layout();
+        QBoxLayout* outer = qobject_cast<QBoxLayout*>(panel->layout());
         const int descriptionPosition = outer->indexOf(editor);
         outer->removeWidget(editor);
         auto* split = new QSplitter(Qt::Horizontal, panel);
